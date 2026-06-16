@@ -5,25 +5,50 @@
 *{box-sizing:border-box}
 html,body,#root{height:100%}
 body{margin:0;background:#f6f7fb;color:#111827}
-button,input{font:inherit}
+button,input,select{font:inherit}
 
-.app-shell{padding:20px;max-width:1200px;margin:0 auto}
+.app-shell{padding:20px;max-width:1400px;margin:0 auto}
 .app-header{margin-bottom:18px;padding:16px;background:#fff;border-radius:10px}
 .app-header h1{margin:0;font-size:1.4rem}
+.app-header p{margin:4px 0 12px 0;color:#666}
+.tabs-navigation{display:flex;gap:12px;margin-top:12px}
+.tab-btn{padding:8px 16px;border:none;border-radius:8px;background:#e6eefc;color:#0b5fff;cursor:pointer;font-weight:500}
+.tab-btn.active{background:#0b5fff;color:#fff}
+
 .app-grid{display:grid;gap:18px;grid-template-columns:360px 1fr}
-.panel{background:#fff;border-radius:12px;padding:16px}
+.history-view{display:grid;gap:18px;grid-template-columns:300px 1fr}
+
+.panel,.history-panel,.history-content-panel{background:#fff;border-radius:12px;padding:16px}
 .entry-form,.settings-card{display:grid;gap:10px}
 .entry-form label,.settings-card label,.search-card label{display:grid;gap:6px;font-size:0.95rem}
-input[type="text"],input[type="number"],input{padding:8px;border-radius:8px;border:1px solid #d1d5db}
-.form-actions,.button-row{display:flex;gap:10px;margin-top:6px}
-button{border:none;border-radius:8px;padding:8px 12px;cursor:pointer}
+input[type="text"],input[type="number"],input[type="date"],select{padding:8px;border-radius:8px;border:1px solid #d1d5db;width:100%}
+.form-actions,.button-row,.backup-actions{display:flex;gap:10px;margin-top:6px;flex-wrap:wrap}
+.backup-actions{flex-direction:column}
+button{border:none;border-radius:8px;padding:8px 12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .primary{background:#0b5fff;color:#fff}
-.secondary{background:#e6eefc}
-.entry-list{display:grid;gap:10px;margin-top:12px}
-.entry-card{padding:10px;border-radius:8px;background:#fbfdff;border:1px solid #e7eefc}
-.entry-row{display:flex;justify-content:space-between;align-items:center;gap:12px}
-.entry-meta{color:#475569;font-size:0.92rem;margin-top:6px}
+.primary:hover{background:#0a4dd4}
+.secondary{background:#e6eefc;color:#0b5fff}
+.secondary:hover{background:#d1e2fb}
+.danger{background:#ef4444;color:#fff}
+.danger:hover{background:#dc2626}
+
+.dates-list{display:grid;gap:6px;margin-top:12px;max-height:400px;overflow-y:auto}
+.date-btn{width:100%;padding:10px;background:#f3f4f6;border:2px solid transparent;border-radius:8px;cursor:pointer;text-align:left;font-size:0.95rem;transition:all 0.2s}
+.date-btn:hover{background:#e5e7eb}
+.date-btn.active{background:#0b5fff;color:#fff;border-color:#0b5fff}
+
+.history-filters{display:grid;gap:10px;margin-bottom:12px}
+.history-filters label{display:grid;gap:6px}
+select{cursor:pointer}
+
+.entry-list,.history-list{display:grid;gap:10px;margin-top:12px}
+.entry-card,.history-entry-card{padding:10px;border-radius:8px;background:#fbfdff;border:1px solid #e7eefc}
+.entry-row,.history-entry-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.entry-meta,.history-meta{color:#475569;font-size:0.92rem;margin-top:6px}
+.history-entry-info{flex:1}
+.history-entry-actions{display:flex;gap:8px}
 .select-row{display:inline-flex;gap:8px;align-items:center}
+.entry-actions,.history-entry-actions{display:flex;gap:8px;flex-wrap:wrap}
 .empty-state{padding:18px;color:#64748b}
 .preview-card{background:#f8fbff;border:1px solid #d9e4ff;border-radius:10px;padding:14px}
 .sticker-preview{position:relative;width:330px;height:363px;background:#fff;border:1px solid #cbd5e1;border-radius:10px;overflow:hidden}

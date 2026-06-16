@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react'
+import { Download, Upload, Trash2, Eye, EyeOff } from 'lucide-react'
 
 const STORAGE_KEY = 'sl_logistics_entries_v1'
 const SETTINGS_KEY = 'sl_logistics_settings_v1'
@@ -6,6 +7,20 @@ const SETTINGS_KEY = 'sl_logistics_settings_v1'
 function mm(v) { return `${v}mm` }
 
 function uid() { return Math.random().toString(36).slice(2, 9) }
+
+function formatDate(timestamp) {
+  const date = new Date(timestamp)
+  return date.toISOString().split('T')[0]
+}
+
+function formatTime(timestamp) {
+  const date = new Date(timestamp)
+  return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })
+}
+
+function getTodayDate() {
+  return new Date().toISOString().split('T')[0]
+}
 
 export default function App() {
   const [lrNo, setLrNo] = useState('')
@@ -26,12 +41,26 @@ export default function App() {
   const [boxX, setBoxX] = useState(70)
   const [boxY, setBoxY] = useState(72)
   const [fontSize, setFontSize] = useState(28)
+  const [viewMode, setViewMode] = useState('entries') // 'entries' or 'history'
+  const [selectedDate, setSelectedDate] = useState(getTodayDate())
+  const [historyFilter, setHistoryFilter] = useState('')
+  const [historyFilterType, setHistoryFilterType] = useState('all')
 
   const printAreaRef = useRef(null)
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) setEntries(JSON.parse(raw))
+    if (raw) {
+      const parsed = JSON.parse(raw)
+      // Migrate old entries to include date/time if missing
+      const migrated = parsed.map(entry => ({
+        ...entry,
+        date: entry.date || formatDate(entry.createdAt || Date.now()),
+        time: entry.time || formatTime(entry.createdAt || Date.now())
+      }))
+      setEntries(migrated)
+    }
     const sraw = localStorage.getItem(SETTINGS_KEY)
     if (sraw) {
       const s = JSON.parse(sraw)
@@ -86,13 +115,16 @@ export default function App() {
   function addEntry(e) {
     e && e.preventDefault()
     if (!lrNo) return alert('LR No required')
+    const now = Date.now()
     const entry = {
       id: uid(),
       lrNo,
       destination,
       pieces: Number(pieces) || 0,
       boxes: generateBoxes(Number(pieces) || 0, Number(piecesPerBox) || 0),
-      createdAt: Date.now()
+      createdAt: now,
+      date: formatDate(now),
+      time: formatTime(now)
     }
     setEntries(prev => [entry, ...prev])
     setLrNo('')
@@ -213,13 +245,126 @@ export default function App() {
     doPrint([sticker])
   }
 
+  function getUniqueDates() {
+    const dates = new Set(entries.map(e => e.date))
+    return Array.from(dates).sort().reverse()
+  }
+
+  function getEntriesByDate(date) {
+    return entries.filter(e => e.date === date)
+  }
+
+  function filterHistoryEntries(dateOnly = null) {
+    let filtered = dateOnly ? getEntriesByDate(dateOnly) : entries
+    
+    if (historyFilterType === 'lr' && historyFilter) {
+      filtered = filtered.filter(e => e.lrNo.toLowerCase().includes(historyFilter.toLowerCase()))
+    } else if (historyFilterType === 'destination' && historyFilter) {
+      filtered = filtered.filter(e => e.destination.toLowerCase().includes(historyFilter.toLowerCase()))
+    }
+    
+    return filtered
+  }
+
+  function allHistoryStickers(dateOnly = null, filteredOnly = true) {
+    const list = []
+    const sourceEntries = dateOnly ? getEntriesByDate(dateOnly) : entries
+    
+    sourceEntries.forEach(entry => {
+      if (historyFilterType === 'lr' && historyFilter && !entry.lrNo.toLowerCase().includes(historyFilter.toLowerCase())) return
+      if (historyFilterType === 'destination' && historyFilter && !entry.destination.toLowerCase().includes(historyFilter.toLowerCase())) return
+      
+      entry.boxes.forEach(b => {
+        list.push({
+          id: `${entry.id}-${b.boxIndex}`,
+          lrNo: entry.lrNo,
+          destination: entry.destination,
+          pieces: b.pieces,
+          boxNo: `${b.boxIndex}/${b.totalBoxes}`,
+          date: entry.date,
+          time: entry.time
+        })
+      })
+    })
+    return list
+  }
+
+  function exportBackup() {
+    const backup = {
+      version: 1,
+      exportDate: getTodayDate(),
+      exportTime: formatTime(Date.now()),
+      entries: entries
+    }
+    const json = JSON.stringify(backup, null, 2)
+    const blob = new Blob([json], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `sl-logistics-backup-${getTodayDate()}.json`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  function handleImportBackup(event) {
+    const file = event.target.files?.[0]
+    if (!file) return
+    
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      try {
+        const backup = JSON.parse(e.target.result)
+        if (!backup.entries || !Array.isArray(backup.entries)) {
+          alert('Invalid backup file format')
+          return
+        }
+        
+        // Merge with existing entries, avoid duplicates by ID
+        const existingIds = new Set(entries.map(e => e.id))
+        const newEntries = backup.entries.filter(e => !existingIds.has(e.id))
+        
+        if (newEntries.length === 0) {
+          alert('No new entries to import')
+          return
+        }
+        
+        // Ensure imported entries have date/time
+        const migratedNewEntries = newEntries.map(entry => ({
+          ...entry,
+          date: entry.date || formatDate(entry.createdAt || Date.now()),
+          time: entry.time || formatTime(entry.createdAt || Date.now())
+        }))
+        
+        setEntries(prev => [...prev, ...migratedNewEntries])
+        alert(`Successfully imported ${newEntries.length} entries`)
+      } catch (err) {
+        alert('Error reading backup file: ' + err.message)
+      }
+    }
+    reader.readAsText(file)
+  }
+
+  function clearHistory() {
+    if (!confirm('Clear all history? This cannot be undone.')) return
+    setEntries([])
+    setSelected(new Set())
+    localStorage.removeItem(STORAGE_KEY)
+  }
+
   return (
     <div className="app-shell">
       <header className="app-header">
         <h1>SL LOGISTICS — Sticker Printing</h1>
         <p>Print text onto pre-printed stickers on A4 (100×110mm)</p>
+        <div className="tabs-navigation">
+          <button className={`tab-btn ${viewMode === 'entries' ? 'active' : ''}`} onClick={() => { setViewMode('entries'); setFilter('') }}>Entries & Print</button>
+          <button className={`tab-btn ${viewMode === 'history' ? 'active' : ''}`} onClick={() => setViewMode('history')}>History & Backup</button>
+        </div>
       </header>
 
+      {viewMode === 'entries' && (
       <div className="app-grid">
         <section className="panel">
           <h2>Load Entry</h2>
@@ -330,6 +475,96 @@ export default function App() {
           </div>
         </section>
       </div>
+      )}
+
+      {viewMode === 'history' && (
+      <div className="history-view">
+        <div className="history-panel">
+          <h2>History & Backup</h2>
+          
+          <div className="backup-actions">
+            <button className="primary" onClick={exportBackup}>
+              <Download size={18} style={{marginRight: '6px'}} />
+              Export Backup
+            </button>
+            <button className="primary" onClick={() => fileInputRef.current?.click()}>
+              <Upload size={18} style={{marginRight: '6px'}} />
+              Import Backup
+            </button>
+            <button className="danger" onClick={clearHistory}>
+              <Trash2 size={18} style={{marginRight: '6px'}} />
+              Clear History
+            </button>
+            <input ref={fileInputRef} type="file" accept=".json" onChange={handleImportBackup} style={{display: 'none'}} />
+          </div>
+
+          <h3>Dates</h3>
+          <div className="dates-list">
+            {getUniqueDates().length === 0 && <div className="empty-state">No entries yet</div>}
+            {getUniqueDates().map(date => (
+              <button
+                key={date}
+                className={`date-btn ${selectedDate === date ? 'active' : ''}`}
+                onClick={() => setSelectedDate(date)}
+              >
+                {date}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="history-content-panel">
+          <h2>Entries for {selectedDate}</h2>
+
+          <div className="history-filters">
+            <label>
+              <select value={historyFilterType} onChange={e => { setHistoryFilterType(e.target.value); setHistoryFilter('') }}>
+                <option value="all">Show All</option>
+                <option value="lr">Search by LR No</option>
+                <option value="destination">Search by Destination</option>
+              </select>
+            </label>
+            {historyFilterType !== 'all' && (
+              <label>
+                <input
+                  type="text"
+                  placeholder={`Search by ${historyFilterType === 'lr' ? 'LR No' : 'Destination'}`}
+                  value={historyFilter}
+                  onChange={e => setHistoryFilter(e.target.value)}
+                />
+              </label>
+            )}
+          </div>
+
+          <div className="history-actions" style={{marginTop: 12}}>
+            <button className="primary" onClick={() => {
+              const stickers = allHistoryStickers(selectedDate)
+              if (stickers.length === 0) return alert('No stickers to print')
+              doPrint(stickers)
+            }}>Print All for {selectedDate}</button>
+          </div>
+
+          <div className="history-list">
+            {allHistoryStickers(selectedDate).length === 0 && <div className="empty-state">No entries for this date</div>}
+            {allHistoryStickers(selectedDate).map(s => (
+              <div key={s.id} className="history-entry-card">
+                <div className="history-entry-row">
+                  <div className="history-entry-info">
+                    <div><strong>LR No:</strong> {s.lrNo}</div>
+                    <div><strong>Destination:</strong> {s.destination}</div>
+                    <div><strong>Pieces:</strong> {s.pieces} — <strong>Box:</strong> {s.boxNo}</div>
+                    <div className="history-meta"><strong>Date:</strong> {s.date} | <strong>Time:</strong> {s.time}</div>
+                  </div>
+                  <div className="history-entry-actions">
+                    <button className="secondary" onClick={() => doPrint([s])}>Reprint</button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      )}
 
       <div className="print-area" ref={printAreaRef} aria-hidden />
     </div>
