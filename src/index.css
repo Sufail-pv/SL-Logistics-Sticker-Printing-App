@@ -32,10 +32,20 @@ button{border:none;border-radius:8px;padding:8px 12px;cursor:pointer;display:fle
 .danger{background:#ef4444;color:#fff}
 .danger:hover{background:#dc2626}
 
+.edit-form{display:grid;gap:12px;padding:12px;background:#f0f9ff;border-radius:8px;border:1px solid #bfdbfe}
+.edit-field{display:grid;gap:6px}
+.edit-field label{display:grid;gap:6px;font-size:0.95rem}
+.edit-field input{padding:8px;border-radius:8px;border:1px solid #d1d5db}
+.edit-actions{display:flex;gap:8px;margin-top:6px}
+.edit-actions button{padding:8px 14px}
+
 .dates-list{display:grid;gap:6px;margin-top:12px;max-height:400px;overflow-y:auto}
 .date-btn{width:100%;padding:10px;background:#f3f4f6;border:2px solid transparent;border-radius:8px;cursor:pointer;text-align:left;font-size:0.95rem;transition:all 0.2s}
 .date-btn:hover{background:#e5e7eb}
 .date-btn.active{background:#0b5fff;color:#fff;border-color:#0b5fff}
+
+.date-picker-section{display:grid;gap:10px;margin-top:12px}
+.date-picker-section label{display:grid;gap:6px;font-size:0.95rem}
 
 .history-filters{display:grid;gap:10px;margin-bottom:12px}
 .history-filters label{display:grid;gap:6px}

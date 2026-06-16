@@ -45,6 +45,8 @@ export default function App() {
   const [selectedDate, setSelectedDate] = useState(getTodayDate())
   const [historyFilter, setHistoryFilter] = useState('')
   const [historyFilterType, setHistoryFilterType] = useState('all')
+  const [editingId, setEditingId] = useState(null)
+  const [editData, setEditData] = useState({ lrNo: '', destination: '', pieces: 0, boxNo: '' })
 
   const printAreaRef = useRef(null)
   const fileInputRef = useRef(null)
@@ -353,6 +355,49 @@ export default function App() {
     localStorage.removeItem(STORAGE_KEY)
   }
 
+  function startEdit(entryId) {
+    const entry = entries.find(e => e.id === entryId)
+    if (!entry) return
+    setEditingId(entryId)
+    setEditData({
+      lrNo: entry.lrNo,
+      destination: entry.destination,
+      pieces: entry.pieces,
+      boxNo: ''
+    })
+  }
+
+  function saveEdit() {
+    if (!editData.lrNo.trim()) {
+      alert('LR No is required')
+      return
+    }
+    setEntries(prev => prev.map(e => {
+      if (e.id === editingId) {
+        return {
+          ...e,
+          lrNo: editData.lrNo,
+          destination: editData.destination,
+          pieces: Number(editData.pieces) || 0,
+          boxes: generateBoxes(Number(editData.pieces) || 0, Number(piecesPerBox) || 0)
+        }
+      }
+      return e
+    }))
+    setEditingId(null)
+    setEditData({ lrNo: '', destination: '', pieces: 0, boxNo: '' })
+  }
+
+  function cancelEdit() {
+    setEditingId(null)
+    setEditData({ lrNo: '', destination: '', pieces: 0, boxNo: '' })
+  }
+
+  function deleteEntry(entryId) {
+    if (!confirm('Are you sure you want to delete this entry?')) return
+    setEntries(prev => prev.filter(e => e.id !== entryId))
+  }
+
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -499,17 +544,15 @@ export default function App() {
           </div>
 
           <h3>Dates</h3>
-          <div className="dates-list">
-            {getUniqueDates().length === 0 && <div className="empty-state">No entries yet</div>}
-            {getUniqueDates().map(date => (
-              <button
-                key={date}
-                className={`date-btn ${selectedDate === date ? 'active' : ''}`}
-                onClick={() => setSelectedDate(date)}
-              >
-                {date}
-              </button>
-            ))}
+          <div className="date-picker-section">
+            <label>
+              Select Date
+              <input 
+                type="date" 
+                value={selectedDate} 
+                onChange={e => setSelectedDate(e.target.value)}
+              />
+            </label>
           </div>
         </div>
 
@@ -545,20 +588,70 @@ export default function App() {
           </div>
 
           <div className="history-list">
-            {allHistoryStickers(selectedDate).length === 0 && <div className="empty-state">No entries for this date</div>}
-            {allHistoryStickers(selectedDate).map(s => (
-              <div key={s.id} className="history-entry-card">
-                <div className="history-entry-row">
-                  <div className="history-entry-info">
-                    <div><strong>LR No:</strong> {s.lrNo}</div>
-                    <div><strong>Destination:</strong> {s.destination}</div>
-                    <div><strong>Pieces:</strong> {s.pieces} — <strong>Box:</strong> {s.boxNo}</div>
-                    <div className="history-meta"><strong>Date:</strong> {s.date} | <strong>Time:</strong> {s.time}</div>
+            {getEntriesByDate(selectedDate).length === 0 && <div className="empty-state">No entries found for this date.</div>}
+            {getEntriesByDate(selectedDate).map(entry => (
+              <div key={entry.id} className="history-entry-card">
+                {editingId === entry.id ? (
+                  <div className="edit-form">
+                    <div className="edit-field">
+                      <label>
+                        LR No
+                        <input
+                          type="text"
+                          value={editData.lrNo}
+                          onChange={e => setEditData({...editData, lrNo: e.target.value})}
+                        />
+                      </label>
+                    </div>
+                    <div className="edit-field">
+                      <label>
+                        Destination
+                        <input
+                          type="text"
+                          value={editData.destination}
+                          onChange={e => setEditData({...editData, destination: e.target.value})}
+                        />
+                      </label>
+                    </div>
+                    <div className="edit-field">
+                      <label>
+                        No. of Pieces
+                        <input
+                          type="number"
+                          min={1}
+                          value={editData.pieces}
+                          onChange={e => setEditData({...editData, pieces: e.target.value})}
+                        />
+                      </label>
+                    </div>
+                    <div className="edit-actions">
+                      <button className="primary" onClick={saveEdit}>Save</button>
+                      <button className="secondary" onClick={cancelEdit}>Cancel</button>
+                    </div>
                   </div>
-                  <div className="history-entry-actions">
-                    <button className="secondary" onClick={() => doPrint([s])}>Reprint</button>
+                ) : (
+                  <div className="history-entry-row">
+                    <div className="history-entry-info">
+                      <div><strong>LR No:</strong> {entry.lrNo}</div>
+                      <div><strong>Destination:</strong> {entry.destination}</div>
+                      <div><strong>Pieces:</strong> {entry.pieces}</div>
+                      <div className="history-meta"><strong>Date:</strong> {entry.date} | <strong>Time:</strong> {entry.time}</div>
+                    </div>
+                    <div className="history-entry-actions">
+                      <button className="secondary" onClick={() => startEdit(entry.id)}>Edit</button>
+                      <button className="secondary" onClick={() => {
+                        const stickers = entry.boxes.map((b, idx) => ({
+                          lrNo: entry.lrNo,
+                          destination: entry.destination,
+                          pieces: b.pieces,
+                          boxNo: `${idx + 1}/${entry.boxes.length}`
+                        }))
+                        doPrint(stickers)
+                      }}>Reprint</button>
+                      <button className="danger" onClick={() => deleteEntry(entry.id)}>Delete</button>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             ))}
           </div>
