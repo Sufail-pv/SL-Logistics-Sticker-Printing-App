@@ -69,6 +69,40 @@ select{cursor:pointer}
 .print-sticker{position:absolute;width:100mm;height:110mm}
 .print-field{position:absolute;font-weight:700;color:#000;white-space:nowrap}
 
+@media (max-width: 768px) {
+  .app-shell{padding:12px}
+  .tabs-navigation{flex-direction:column;gap:8px}
+  .tab-btn{width:100%;padding:10px}
+
+  .app-grid, .history-view{grid-template-columns:1fr}
+  .panel,.history-panel,.history-content-panel{width:100%;padding:12px}
+
+  input[type="text"],input[type="number"],input[type="date"],select,button{width:100%}
+  .form-actions,.button-row,.backup-actions{flex-direction:column;align-items:stretch}
+
+  /* Ensure backup controls then date picker then entries stack vertically */
+  .backup-actions{order:0}
+  .date-picker-section{order:1}
+  .history-content-panel{order:2}
+
+  /* Entry cards stack and remain readable */
+  .entry-row,.history-entry-row{flex-direction:column;align-items:stretch;gap:8px}
+  .history-entry-info{margin-bottom:8px}
+
+  /* Action buttons wrap and don't overflow */
+  .history-entry-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .history-entry-actions button{flex:1 1 auto;min-width:0}
+
+  .entry-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .entry-actions button{flex:1 1 auto;min-width:0}
+
+  /* Tabs full width */
+  .tabs-navigation{width:100%}
+
+  /* Avoid horizontal scrolling */
+  body{overflow-x:hidden}
+}
+
 @media print{
   @page{size:A4 portrait;margin:0}
   body *{visibility:hidden}
